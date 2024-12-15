@@ -1,0 +1,63 @@
+import os
+import json
+from web3 import Web3
+from collections import Counter
+
+# Replace this with your Infura/Alchemy URL or any other Ethereum RPC endpoint
+INFURA_URL = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+ETHERSCAN_API_KEY = "YOUR_ETHERSCAN_API_KEY"
+
+# Connect to the Ethereum node
+web3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+# Check if connection is successful
+if not web3.isConnected():
+    print("Failed to connect to Ethereum network!")
+    exit()
+
+# Function to fetch recent block transactions
+def get_recent_transactions(block_range=10):
+    """Fetch transactions from the last `block_range` blocks"""
+    latest_block = web3.eth.blockNumber
+    transactions = []
+
+    for block_num in range(latest_block - block_range + 1, latest_block + 1):
+        block = web3.eth.getBlock(block_num, full_transactions=True)
+        transactions.extend(block['transactions'])
+
+    return transactions
+
+# Function to analyze interactions with smart contracts
+def analyze_interactions(transactions):
+    """Analyze the most frequently interacted smart contracts"""
+    contract_addresses = []
+    for tx in transactions:
+        # Check if the transaction is interacting with a contract (not to/from an EOAs)
+        if tx['to'] and len(tx['to']) == 42:  # Valid Ethereum address
+            contract_addresses.append(tx['to'].lower())
+    
+    # Count the occurrences of each contract address
+    contract_counts = Counter(contract_addresses)
+    
+    # Sort by frequency (most interacted contracts)
+    sorted_contracts = contract_counts.most_common()
+    return sorted_contracts
+
+# Main function to run the analysis
+def main():
+    print("Fetching recent transactions...")
+    
+    # Fetch transactions from the last 10 blocks
+    transactions = get_recent_transactions(block_range=10)
+
+    # Analyze the most frequently interacted contracts
+    print("Analyzing transactions...")
+    contract_interactions = analyze_interactions(transactions)
+
+    # Display the most frequently interacted contracts
+    print(f"\nTop 10 Most Frequently Interacted Smart Contracts (Last 10 Blocks):")
+    for idx, (contract, count) in enumerate(contract_interactions[:10]):
+        print(f"{idx + 1}. {contract} - {count} interactions")
+
+if __name__ == "__main__":
+    main()
